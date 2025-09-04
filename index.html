@@ -1242,45 +1242,9 @@
         // Google Forms configuration
         const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeuB9ORvj-fjBar5KbmIddJRygD7gFFvA3GMqri7jT71d6N3Q/formResponse';
         const GOOGLE_FORM_ENTRY_IDS = {
-            name: 'entry.93821871',      // İsim sorusunun entry ID'si
-            message: 'entry.1445132954', // Mesaj sorusunun entry ID'si
-            date: 'entry.1166974658'     // Tarih sorusunun entry ID'si (tahmin)
+            name: 'entry.1068216033',    // Ad alanının entry ID'si
+            message: 'entry.93821871'    // Mesaj alanının entry ID'si
         };
-        
-        // Test function to manually check entry IDs
-        function testGoogleForm() {
-            console.log('=== GOOGLE FORM TEST ===');
-            console.log('Form URL:', GOOGLE_FORM_URL);
-            console.log('Current Entry IDs:', GOOGLE_FORM_ENTRY_IDS);
-            
-            // Test with sample data
-            const testData = {
-                timestamp: new Date().toISOString(),
-                name: 'Test User',
-                message: 'This is a test message from console'
-            };
-            
-            console.log('Testing with data:', testData);
-            
-            // Show what will be sent
-            const date = new Date(testData.timestamp);
-            const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-            console.log('Formatted date:', formattedDate);
-            
-            submitToGoogleForms(testData);
-        }
-        
-        // Function to update entry IDs manually
-        function updateEntryIds(nameId, messageId, dateId) {
-            GOOGLE_FORM_ENTRY_IDS.name = nameId;
-            GOOGLE_FORM_ENTRY_IDS.message = messageId;
-            GOOGLE_FORM_ENTRY_IDS.date = dateId;
-            console.log('Updated Entry IDs:', GOOGLE_FORM_ENTRY_IDS);
-        }
-        
-        // Make test functions available globally
-        window.testGoogleForm = testGoogleForm;
-        window.updateEntryIds = updateEntryIds;
         
         // Feedback system functions
         function openFeedbackModal() {
@@ -1341,22 +1305,59 @@
             switchLanguage(currentLanguage);
         }
         
-        // Google Forms submission with direct redirect
+        // Google Forms submission with automatic POST attempt
         function submitToGoogleForms(feedbackData) {
-            // Convert date to MM/DD/YYYY format for Google Forms
-            const date = new Date(feedbackData.timestamp);
-            const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-            
             const data = {
                 [GOOGLE_FORM_ENTRY_IDS.name]: feedbackData.name || 'Anonim',
-                [GOOGLE_FORM_ENTRY_IDS.message]: feedbackData.message,
-                [GOOGLE_FORM_ENTRY_IDS.date]: formattedDate
+                [GOOGLE_FORM_ENTRY_IDS.message]: feedbackData.message
             };
             
-            console.log('Submitting to Google Forms:', data);
-            console.log('Form URL:', GOOGLE_FORM_URL);
+            // Try automatic submission first
+            const formData = new FormData();
+            Object.keys(data).forEach(key => {
+                formData.append(key, data[key]);
+            });
             
-            // Create URL with pre-filled data
+            // Attempt direct POST to Google Forms
+            fetch(GOOGLE_FORM_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: formData
+            })
+            .then(() => {
+                showSuccessMessage();
+            })
+            .catch((error) => {
+                showFallbackMethod(data);
+            });
+            
+            return true;
+        }
+        
+        // Show success message
+        function showSuccessMessage() {
+            const modal = document.getElementById('feedbackModal');
+            const modalBody = modal.querySelector('.modal-body');
+            
+            modalBody.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="margin-bottom: 20px;">
+                        <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981; margin-bottom: 15px;"></i>
+                    </div>
+                    <h4 style="margin-bottom: 15px; color: #1e293b;">✅ Feedback Gönderildi!</h4>
+                    <p style="margin-bottom: 20px; color: #64748b; line-height: 1.6;">
+                        Feedback'iniz başarıyla Google Forms'a gönderildi.<br>
+                        Teşekkür ederiz!
+                    </p>
+                    <button onclick="closeFeedbackModal()" class="btn-submit" style="width: 100%;">
+                        <i class="fas fa-check"></i> Tamam
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Show fallback method (pre-filled URL)
+        function showFallbackMethod(data) {
             const formUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSeuB9ORvj-fjBar5KbmIddJRygD7gFFvA3GMqri7jT71d6N3Q/viewform';
             const params = new URLSearchParams();
             
@@ -1367,7 +1368,6 @@
             
             const fullUrl = `${formUrl}?${params.toString()}`;
             
-            // Replace modal content with redirect message
             const modal = document.getElementById('feedbackModal');
             const modalBody = modal.querySelector('.modal-body');
             
@@ -1378,15 +1378,9 @@
                     </div>
                     <h4 style="margin-bottom: 15px; color: #1e293b;">Feedback'iniz Hazır!</h4>
                     <p style="margin-bottom: 20px; color: #64748b; line-height: 1.6;">
-                        Verileriniz Google Forms'da önceden doldurulmuş durumda.<br>
+                        Otomatik gönderim başarısız oldu. Verileriniz Google Forms'da önceden doldurulmuş durumda.<br>
                         Yeni sekmede açılacak ve orada gönderebilirsiniz.
                     </p>
-                    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
-                        <strong>Gönderilecek Veriler:</strong><br>
-                        <span style="color: #64748b;">İsim:</span> ${data[GOOGLE_FORM_ENTRY_IDS.name]}<br>
-                        <span style="color: #64748b;">Mesaj:</span> ${data[GOOGLE_FORM_ENTRY_IDS.message]}<br>
-                        <span style="color: #64748b;">Tarih:</span> ${data[GOOGLE_FORM_ENTRY_IDS.date]}
-                    </div>
                     <div style="display: flex; gap: 10px; justify-content: center;">
                         <button onclick="closeFeedbackModal()" class="btn-cancel">İptal</button>
                         <button onclick="window.open('${fullUrl}', '_blank'); closeFeedbackModal();" class="btn-submit">
@@ -1396,8 +1390,6 @@
                 </div>
             `;
             
-            console.log("✅ Feedback form ready for submission");
-            return true;
         }
         
         // Close modal when clicking outside
